@@ -765,3 +765,9 @@ with col_out:
             ── 💡 opportunities
         </div>
         """, unsafe_allow_html=True)
+<<<<<<< HEAD
+=======
+
+        #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
+        #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
+>>>>>>> 67d3d2d (Initial commit)
