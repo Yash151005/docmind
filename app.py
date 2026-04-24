@@ -40,7 +40,7 @@ except ImportError:
     OPENAI_OK = False
 
 try:
-    import google.generativeai as genai
+    from google import genai
     GEMINI_OK = True
 except ImportError:
     GEMINI_OK = False
@@ -219,7 +219,7 @@ def build_prompt(doc_text: str, doc_type: str, focus_areas: list) -> str:
 
 DOCUMENT:
 \"\"\"
-{doc_text[:14000]}
+{doc_text[:4000]}
 \"\"\"
 
 FOCUS AREAS: {focus_str}
@@ -283,29 +283,50 @@ def call_claude(api_key: str, prompt: str) -> dict:
     )
     return _parse_json(msg.content[0].text)
 
-
 def call_openai(api_key: str, prompt: str) -> dict:
-    client = OpenAI(api_key=api_key)
+    from openai import OpenAI
+    import json
+
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",  # 👈 important
+        api_key=api_key,
+    )
+
     resp = client.chat.completions.create(
-        model="gpt-4o",
+        model="openai/gpt-4o-mini",  # 👈 OpenRouter model
         max_tokens=4096,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": "You are a strategic analyst. Always respond with valid JSON only."},
-            {"role": "user",   "content": prompt},
+            {"role": "user", "content": prompt},
         ],
     )
-    return _parse_json(resp.choices[0].message.content)
 
+    return json.loads(resp.choices[0].message.content)
 
 def call_gemini(api_key: str, prompt: str) -> dict:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-pro",
-        generation_config={"response_mime_type": "application/json"},
+    from google import genai
+    import json, re
+
+    client = genai.Client(api_key=api_key)
+
+    response = client.models.generate_content(
+        model="models/gemini-2.0-flash",
+        contents=prompt,
+        config={
+            "response_mime_type": "application/json"
+        }
     )
-    resp = model.generate_content(prompt)
-    return _parse_json(resp.text)
+
+    text = response.text
+
+    try:
+        return json.loads(text)
+    except:
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+        raise
 
 
 def run_ai(provider: str, api_key: str, prompt: str) -> dict:
