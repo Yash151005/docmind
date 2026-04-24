@@ -1,0 +1,6 @@
+streamlit
+anthropic
+openai
+google-generativeai
+PyMuPDF
+python-docx
